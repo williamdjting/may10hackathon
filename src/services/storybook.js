@@ -1,7 +1,5 @@
 import { supabase } from './supabase.js';
-import { BackboardClient } from 'backboard-sdk';
-
-const client = new BackboardClient({ apiKey: process.env.BACKBOARD_API_KEY });
+import { sendMessage } from './backboard.js';
 
 export async function generateStorybook(eventId, customPrompt = '') {
   try {
@@ -16,74 +14,45 @@ export async function generateStorybook(eventId, customPrompt = '') {
       return;
     }
 
-    // Analyze each photo individually with vision so the AI actually sees the image
-    const pages = [];
-    for (const photo of event.photos) {
-      const contributor = photo.attendees?.name ?? 'a guest';
-      const userCaption = photo.user_caption ? `\nThe photographer added: "${photo.user_caption}"` : '';
+    const photoList = event.photos
+      .map((p, i) => `Photo ${i + 1} by ${p.attendees?.name ?? 'a guest'}: ${p.cloudinary_url}`)
+      .join('\n');
 
-      const captionResponse = await client.sendMessage({
-        content: [
-          {
-            type: 'text',
-            text:
-              `You are writing a warm, heartfelt family storybook. ` +
-              `This photo was taken by ${contributor} at an event called "${event.name}".${userCaption}\n` +
-              `Look at the image and write 2–3 sentences that capture this moment as if narrating a cherished keepsake. ` +
-              `Be specific about what you actually see — people, expressions, setting, mood. ` +
-              `Do not be generic. Respond with only the caption text, no quotes or labels.`,
-          },
-          {
-            type: 'image_url',
-            image_url: { url: photo.cloudinary_url },
-          },
-        ],
-        memory: 'Auto',
-      });
+    const toneInstruction = customPrompt
+      ? `The organizer has provided this guidance for the story: "${customPrompt}"\n\n`
+      : '';
 
-      pages.push({
-        photo_url: photo.cloudinary_url,
-        contributor,
-        user_caption: photo.user_caption ?? null,
-        caption: captionResponse.content.trim(),
+    const prompt =
+      `You are a warm, creative storyteller creating a digital storybook for a gathering called "${event.name}".\n` +
+      `Event description: ${event.description ?? 'A special gathering'}\n` +
+      `Event date: ${event.event_date ?? 'Recently'}\n\n` +
+      toneInstruction +
+      `Here are photos contributed by attendees:\n${photoList}\n\n` +
+      `For each photo write a short, heartfelt caption (2–3 sentences) as if narrating a family keepsake.\n` +
+      `Then write a closing paragraph that weaves all the moments into one story.\n\n` +
+      `Respond with ONLY valid JSON in this exact shape:\n` +
+      `{\n` +
+      `  "title": "storybook title",\n` +
+      `  "pages": [\n` +
+      `    { "photo_url": "...", "contributor": "...", "caption": "..." }\n` +
+      `  ],\n` +
+      `  "closing": "closing narrative"\n` +
+      `}`;
+
+    const first = await sendMessage({ content: prompt, memory: 'Auto' });
+
+    const parsed = extractJSON(first.content);
+    if (!parsed) {
+      const retry = await sendMessage({
+        content: 'Please respond with only the JSON object, no surrounding text.',
+        threadId: first.threadId,
       });
+      const retryParsed = extractJSON(retry.content);
+      if (!retryParsed) throw new Error('Could not parse storybook JSON after retry');
+      await saveStorybook(eventId, retryParsed);
+    } else {
+      await saveStorybook(eventId, parsed);
     }
-
-    // Generate the overall narrative using the per-photo captions
-    const pagesSummary = pages
-      .map((p, i) => `Photo ${i + 1} by ${p.contributor}: ${p.caption}`)
-      .join('\n\n');
-
-    const toneInstruction = customPrompt ? `\nOrganizer's guidance: "${customPrompt}"\n` : '';
-
-    const narrativeResponse = await client.sendMessage({
-      content:
-        `Write a title and a closing paragraph for a family storybook about "${event.name}"` +
-        (event.event_date ? ` on ${event.event_date}` : '') + `.\n` +
-        toneInstruction +
-        `Here are the moments captured:\n\n${pagesSummary}\n\n` +
-        `Respond with ONLY valid JSON in this exact shape:\n` +
-        `{ "title": "storybook title", "closing": "closing narrative paragraph" }`,
-      memory: 'Auto',
-    });
-
-    const parsed = extractJSON(narrativeResponse.content);
-    if (!parsed) throw new Error('Could not parse narrative JSON');
-
-    const storybookData = {
-      title: parsed.title,
-      pages,
-      closing: parsed.closing,
-    };
-
-    await upsertStorybook(eventId, {
-      title: storybookData.title,
-      narrative: storybookData,
-      summary: storybookData.closing,
-      status: 'complete',
-      generated_at: new Date().toISOString(),
-    });
-
   } catch (err) {
     console.error('Storybook generation failed:', err);
     await upsertStorybook(eventId, { status: 'error' });
@@ -98,6 +67,16 @@ function extractJSON(text) {
   } catch {
     return null;
   }
+}
+
+async function saveStorybook(eventId, data) {
+  await upsertStorybook(eventId, {
+    title: data.title,
+    narrative: data,
+    summary: data.closing,
+    status: 'complete',
+    generated_at: new Date().toISOString(),
+  });
 }
 
 async function upsertStorybook(eventId, fields) {

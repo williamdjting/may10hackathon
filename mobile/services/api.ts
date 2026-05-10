@@ -39,9 +39,7 @@ export type Attendee = {
 export type Photo = {
   id: string;
   cloudinary_url: string;
-  user_caption: string | null;
   created_at: string;
-  attendees?: { name: string };
 };
 
 export type Storybook = {

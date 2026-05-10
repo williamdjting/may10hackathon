@@ -109,30 +109,19 @@ export default function EventDetailScreen() {
         </Pressable>
       </View>
 
-      {/* Photos list */}
+      {/* Photos grid */}
       {photoCount > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos ({photoCount})</Text>
-          {event.photos!.map(photo => (
-            <View key={photo.id} style={styles.photoCard}>
+          <View style={styles.photoGrid}>
+            {event.photos!.map(photo => (
               <Image
+                key={photo.id}
                 source={{ uri: photo.cloudinary_url }}
-                style={styles.photoCardImage}
-                resizeMode="cover"
+                style={styles.photoThumb}
               />
-              <View style={styles.photoMeta}>
-                <Text style={styles.photoContributor}>{photo.attendees?.name ?? 'Guest'}</Text>
-                <Text style={styles.photoTime}>
-                  {new Date(photo.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                  {' · '}
-                  {new Date(photo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </Text>
-                {photo.user_caption ? (
-                  <Text style={styles.photoCaption}>"{photo.user_caption}"</Text>
-                ) : null}
-              </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       )}
 
@@ -249,24 +238,4 @@ const styles = StyleSheet.create({
   },
   storybookButtons: { gap: 10 },
   regenerateButton: { backgroundColor: '#888' },
-  photoCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  photoCardImage: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#EEE',
-  },
-  photoMeta: { padding: 12 },
-  photoContributor: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
-  photoTime: { fontSize: 13, color: '#999', marginBottom: 6 },
-  photoCaption: { fontSize: 14, color: '#555', fontStyle: 'italic' },
 });
