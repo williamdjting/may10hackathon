@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, Event, MegaStorybook } from '../services/api';
+import SignOutButton from './SignOutButton';
 
 type Screen = 'events' | 'storybook';
 
@@ -37,17 +38,15 @@ export default function UserApp({ telegramId, onLogout }: Props) {
     <EventsView
       telegramId={telegramId}
       onStorybook={(sb) => { setMegaStorybook(sb); setScreen('storybook'); }}
-      onLogout={onLogout}
     />
   );
 }
 
 // ─── Events selection screen ──────────────────────────────────────────────────
 
-function EventsView({ telegramId, onStorybook, onLogout }: {
+function EventsView({ telegramId, onStorybook }: {
   telegramId: string;
   onStorybook: (sb: MegaStorybook) => void;
-  onLogout: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -99,13 +98,8 @@ function EventsView({ telegramId, onStorybook, onLogout }: {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Contributions</Text>
-          <Text style={styles.headerSub}>Select events to weave into your story</Text>
-        </View>
-        <Pressable onPress={onLogout}>
-          <Text style={styles.logoutText}>Sign out</Text>
-        </Pressable>
+        <Text style={styles.headerTitle}>My Contributions</Text>
+        <Text style={styles.headerSub}>Select events to weave into your story</Text>
       </View>
 
       {loading ? (
@@ -119,7 +113,7 @@ function EventsView({ telegramId, onStorybook, onLogout }: {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 120 }]}
+          contentContainerStyle={[styles.list, { paddingBottom: 24 }]}
           showsVerticalScrollIndicator={false}
         >
           {events.map(event => {
@@ -160,40 +154,41 @@ function EventsView({ telegramId, onStorybook, onLogout }: {
               </Pressable>
             );
           })}
+
+          <View style={styles.generateSection}>
+            <TextInput
+              style={styles.promptInput}
+              value={prompt}
+              onChangeText={setPrompt}
+              placeholder="Optional tone or theme for your mega storybook..."
+              placeholderTextColor="#BBB"
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <Pressable
+              style={[styles.generateBtn, (!selected.size || generating) && styles.generateBtnDisabled]}
+              onPress={handleGenerate}
+              disabled={!selected.size || generating}
+            >
+              {generating ? (
+                <View style={styles.generatingRow}>
+                  <ActivityIndicator color="#FFF" style={{ marginRight: 10 }} />
+                  <Text style={styles.generateBtnText}>Writing your story...</Text>
+                </View>
+              ) : (
+                <Text style={styles.generateBtnText}>
+                  {selected.size === 0
+                    ? 'Select events above'
+                    : `Create Mega Storybook (${selected.size} event${selected.size !== 1 ? 's' : ''})`}
+                </Text>
+              )}
+            </Pressable>
+          </View>
         </ScrollView>
       )}
 
-      {/* Bottom action bar */}
-      {!loading && events.length > 0 && (
-        <View style={[styles.actionBar, { paddingBottom: insets.bottom + 16 }]}>
-          <TextInput
-            style={styles.promptInput}
-            value={prompt}
-            onChangeText={setPrompt}
-            placeholder="Optional tone or theme for your mega storybook..."
-            placeholderTextColor="#BBB"
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <Pressable
-            style={[styles.generateBtn, (!selected.size || generating) && styles.generateBtnDisabled]}
-            onPress={handleGenerate}
-            disabled={!selected.size || generating}
-          >
-            {generating ? (
-              <View style={styles.generatingRow}>
-                <ActivityIndicator color="#FFF" style={{ marginRight: 10 }} />
-                <Text style={styles.generateBtnText}>Writing your story...</Text>
-              </View>
-            ) : (
-              <Text style={styles.generateBtnText}>
-                {selected.size === 0
-                  ? 'Select events above'
-                  : `Create Mega Storybook (${selected.size} event${selected.size !== 1 ? 's' : ''})`}
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      )}
+      <View style={{ paddingBottom: insets.bottom }}>
+        <SignOutButton />
+      </View>
     </View>
   );
 }
@@ -246,6 +241,8 @@ function MegaStorybookView({ storybook, onBack }: { storybook: MegaStorybook; on
       <Pressable style={styles.backBtn} onPress={onBack}>
         <Text style={styles.backBtnText}>← Back to Events</Text>
       </Pressable>
+
+      <SignOutButton />
     </ScrollView>
   );
 }
@@ -257,16 +254,12 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
 
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 24, fontWeight: '800', color: '#C96A2C' },
-  headerSub: { fontSize: 13, color: '#888', marginTop: 2 },
-  logoutText: { fontSize: 14, color: '#888', fontWeight: '600', paddingTop: 4 },
+  headerSub: { fontSize: 12, color: '#AAA', marginTop: 3 },
 
   list: { padding: 20, gap: 14 },
 
@@ -304,17 +297,9 @@ const styles = StyleSheet.create({
 
   photoStrip: { flexDirection: 'row', gap: 4 },
 
-  actionBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FAFAF8',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#EBEBEB',
+  generateSection: {
     gap: 10,
+    paddingTop: 8,
   },
   promptInput: {
     backgroundColor: '#FFF',

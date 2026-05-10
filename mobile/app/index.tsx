@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { api, Event } from '../services/api';
+import SignOutButton from '../components/SignOutButton';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -72,14 +73,21 @@ export default function HomeScreen() {
         data={events}
         keyExtractor={(e) => e.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 120 }]}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No events yet</Text>
             <Text style={styles.emptySubtitle}>Create your first gathering below.</Text>
           </View>
         }
-        ListHeaderComponent={<Text style={styles.heading}>Your Gatherings</Text>}
+        ListHeaderComponent={<Text style={styles.heading}>My Events</Text>}
+        ListFooterComponent={
+          <View style={styles.newEventFooter}>
+            <Pressable style={styles.newEventBtn} onPress={() => router.push('/create')}>
+              <Text style={styles.newEventBtnText}>+ New Event</Text>
+            </Pressable>
+          </View>
+        }
         renderItem={({ item }) => (
           <View style={styles.cardRow}>
             <Pressable
@@ -103,12 +111,9 @@ export default function HomeScreen() {
           </View>
         )}
       />
-      <Pressable
-        style={[styles.fab, { bottom: insets.bottom + 20 }]}
-        onPress={() => router.push('/create')}
-      >
-        <Text style={styles.fabText}>+ New Event</Text>
-      </Pressable>
+      <View style={[styles.signOutFixed, { bottom: insets.bottom + 16 }]}>
+        <SignOutButton />
+      </View>
     </View>
   );
 }
@@ -151,9 +156,8 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
   emptySubtitle: { fontSize: 15, color: '#888' },
-  fab: {
-    position: 'absolute',
-    alignSelf: 'center',
+  newEventFooter: { alignItems: 'center', paddingVertical: 8 },
+  newEventBtn: {
     backgroundColor: '#C96A2C',
     paddingHorizontal: 32,
     paddingVertical: 16,
@@ -164,5 +168,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  fabText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  newEventBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  signOutFixed: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 });

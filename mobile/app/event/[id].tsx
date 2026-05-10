@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { api, Event, Storybook } from '../../services/api';
+import SignOutButton from '../../components/SignOutButton';
 
 declare const process: { env: Record<string, string | undefined> };
 const BOT_USERNAME = process.env.EXPO_PUBLIC_BOT_USERNAME ?? 'CandidMomentsBot';
@@ -171,6 +172,8 @@ export default function EventDetailScreen() {
           <Text style={styles.homeButtonText}>← Back to Home</Text>
         </Pressable>
       </View>
+
+      <SignOutButton />
     </ScrollView>
   );
 }

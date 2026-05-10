@@ -1,23 +1,27 @@
-import { useState } from 'react';
-import { Pressable, Text } from 'react-native';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoginView, { Role } from '../components/LoginView';
 import UserApp from '../components/UserApp';
+import { authStore } from '../services/authStore';
 
 export default function RootLayout() {
   const [role, setRole] = useState<Role | null>(null);
   const [telegramId, setTelegramId] = useState<string | undefined>();
 
-  function handleLogin(r: Role, tid?: string) {
-    setTelegramId(tid);
-    setRole(r);
-  }
-
   function handleLogout() {
     setRole(null);
     setTelegramId(undefined);
+  }
+
+  useEffect(() => {
+    authStore.register(handleLogout);
+  }, []);
+
+  function handleLogin(r: Role, tid?: string) {
+    setTelegramId(tid);
+    setRole(r);
   }
 
   if (!role) {
@@ -48,11 +52,6 @@ export default function RootLayout() {
           headerTitleAlign: 'center',
           headerShadowVisible: false,
           contentStyle: { backgroundColor: '#FAFAF8' },
-          headerRight: () => (
-            <Pressable onPress={handleLogout} style={{ marginRight: 4 }}>
-              <Text style={{ color: '#888', fontSize: 14, fontWeight: '600' }}>Sign out</Text>
-            </Pressable>
-          ),
         }}
       >
         <Stack.Screen
