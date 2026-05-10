@@ -1,0 +1,119 @@
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { router } from 'expo-router';
+import { api, Event } from '../services/api';
+
+export default function HomeScreen() {
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.events.list();
+      setEvents(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#C96A2C" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={events}
+        keyExtractor={(e) => e.id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No events yet</Text>
+            <Text style={styles.emptySubtitle}>Create your first gathering below.</Text>
+          </View>
+        }
+        ListHeaderComponent={<Text style={styles.heading}>Your Gatherings</Text>}
+        renderItem={({ item }) => (
+          <Pressable style={styles.card} onPress={() => router.push(`/event/${item.id}`)}>
+            <View style={styles.cardTop}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              <View style={[styles.badge, item.status === 'active' ? styles.badgeActive : styles.badgeDone]}>
+                <Text style={styles.badgeText}>{item.status}</Text>
+              </View>
+            </View>
+            {item.event_date && (
+              <Text style={styles.cardDate}>{new Date(item.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+            )}
+            <Text style={styles.cardCode}>Code: {item.code}</Text>
+          </Pressable>
+        )}
+      />
+      <Pressable style={styles.fab} onPress={() => router.push('/create')}>
+        <Text style={styles.fabText}>+ New Event</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  list: { padding: 20, paddingBottom: 100 },
+  heading: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', marginBottom: 20 },
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardName: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', flex: 1, marginRight: 8 },
+  cardDate: { fontSize: 14, color: '#888', marginBottom: 4 },
+  cardCode: { fontSize: 13, color: '#C96A2C', fontWeight: '600', marginTop: 4 },
+  badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  badgeActive: { backgroundColor: '#E8F5E9' },
+  badgeDone: { backgroundColor: '#FFF3E0' },
+  badgeText: { fontSize: 12, fontWeight: '600', color: '#444' },
+  empty: { alignItems: 'center', paddingTop: 80 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
+  emptySubtitle: { fontSize: 15, color: '#888' },
+  fab: {
+    position: 'absolute',
+    bottom: 36,
+    alignSelf: 'center',
+    backgroundColor: '#C96A2C',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 40,
+    shadowColor: '#C96A2C',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  fabText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+});
