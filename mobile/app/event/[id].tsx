@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  FlatList,
   Image,
   Pressable,
   RefreshControl,
@@ -11,11 +10,13 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { api, Event, Storybook } from '../../services/api';
 
+declare const process: { env: Record<string, string | undefined> };
 const BOT_USERNAME = process.env.EXPO_PUBLIC_BOT_USERNAME ?? 'CandidMomentsBot';
 const { width } = Dimensions.get('window');
 const PHOTO_SIZE = (width - 48 - 8) / 3;
@@ -28,6 +29,7 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -51,7 +53,14 @@ export default function EventDetailScreen() {
   async function handleShare() {
     if (!event) return;
     const link = `https://t.me/${BOT_USERNAME}?start=${event.code}`;
-    await Share.share({ message: `Join ${event.name} on CandidMoments!\nTap to contribute your photo: ${link}` });
+    const message = `Join ${event.name} on CandidMoments!\nTap to contribute your photo: ${link}`;
+    try {
+      await Share.share({ message });
+    } catch {
+      // Web fallback: copy to clipboard
+      await navigator.clipboard.writeText(message);
+      Alert.alert('Copied!', 'Invite link copied to clipboard.');
+    }
   }
 
   async function handleGenerate() {
@@ -60,17 +69,9 @@ export default function EventDetailScreen() {
       Alert.alert('No photos yet', 'Wait for attendees to submit photos before generating the storybook.');
       return;
     }
-    Alert.alert('Generate Storybook', 'This will create an AI storybook from all submitted photos. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Generate',
-        onPress: async () => {
-          setGenerating(true);
-          await api.storybooks.generate(id);
-          router.push(`/storybook/${id}`);
-        },
-      },
-    ]);
+    setGenerating(true);
+    await api.storybooks.generate(id, customPrompt);
+    router.push(`/storybook/${id}`);
   }
 
   if (loading) {
@@ -108,43 +109,67 @@ export default function EventDetailScreen() {
         </Pressable>
       </View>
 
-      {/* Photos grid */}
+      {/* Photos list */}
       {photoCount > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Photos ({photoCount})</Text>
-          <View style={styles.photoGrid}>
-            {event.photos!.map(photo => (
+          {event.photos!.map(photo => (
+            <View key={photo.id} style={styles.photoCard}>
               <Image
-                key={photo.id}
                 source={{ uri: photo.cloudinary_url }}
-                style={styles.photoThumb}
+                style={styles.photoCardImage}
+                resizeMode="cover"
               />
-            ))}
-          </View>
+              <View style={styles.photoMeta}>
+                <Text style={styles.photoContributor}>{photo.attendees?.name ?? 'Guest'}</Text>
+                <Text style={styles.photoTime}>
+                  {new Date(photo.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  {' · '}
+                  {new Date(photo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </Text>
+                {photo.user_caption ? (
+                  <Text style={styles.photoCaption}>"{photo.user_caption}"</Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
         </View>
       )}
 
       {/* Storybook CTA */}
       <View style={styles.section}>
-        {storybook?.status === 'complete' ? (
-          <Pressable style={styles.primaryButton} onPress={() => router.push(`/storybook/${id}`)}>
-            <Text style={styles.primaryButtonText}>View Storybook</Text>
-          </Pressable>
-        ) : storybook?.status === 'generating' ? (
+        <Text style={styles.sectionTitle}>Storybook</Text>
+        <TextInput
+          style={styles.promptInput}
+          value={customPrompt}
+          onChangeText={setCustomPrompt}
+          placeholder="Tell the AI how to narrate this event... (optional)"
+          placeholderTextColor="#BBB"
+          multiline
+          numberOfLines={3}
+        />
+        {storybook?.status === 'generating' ? (
           <View style={styles.generatingBox}>
             <ActivityIndicator color="#C96A2C" style={{ marginBottom: 8 }} />
             <Text style={styles.generatingText}>Creating your storybook...</Text>
           </View>
         ) : (
-          <Pressable
-            style={[styles.primaryButton, generating && styles.buttonDisabled]}
-            onPress={handleGenerate}
-            disabled={generating}
-          >
-            <Text style={styles.primaryButtonText}>
-              {generating ? 'Starting...' : 'Generate Storybook'}
-            </Text>
-          </Pressable>
+          <View style={styles.storybookButtons}>
+            {storybook?.status === 'complete' && (
+              <Pressable style={styles.outlineButton} onPress={() => router.push(`/storybook/${id}`)}>
+                <Text style={styles.outlineButtonText}>View Storybook</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={[styles.primaryButton, generating && styles.buttonDisabled, storybook?.status === 'complete' && styles.regenerateButton]}
+              onPress={handleGenerate}
+              disabled={generating}
+            >
+              <Text style={styles.primaryButtonText}>
+                {generating ? 'Starting...' : storybook?.status === 'complete' ? 'Regenerate' : 'Generate Storybook'}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -210,4 +235,38 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },
   generatingBox: { alignItems: 'center', padding: 24 },
   generatingText: { color: '#888', fontSize: 15 },
+  promptInput: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    marginBottom: 12,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  storybookButtons: { gap: 10 },
+  regenerateButton: { backgroundColor: '#888' },
+  photoCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  photoCardImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#EEE',
+  },
+  photoMeta: { padding: 12 },
+  photoContributor: { fontSize: 15, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  photoTime: { fontSize: 13, color: '#999', marginBottom: 6 },
+  photoCaption: { fontSize: 14, color: '#555', fontStyle: 'italic' },
 });

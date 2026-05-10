@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,8 +9,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { api, Storybook } from '../../services/api';
-
-const { width } = Dimensions.get('window');
 
 export default function StorybookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -112,11 +108,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   photo: {
-    width: width - 48,
-    height: (width - 48) * 0.75,
+    width: '100%',
+    maxWidth: 600,
+    aspectRatio: 4 / 3,
     borderRadius: 18,
     backgroundColor: '#EEE',
     marginBottom: 14,
+    alignSelf: 'center',
   },
   pageText: {
     paddingHorizontal: 4,

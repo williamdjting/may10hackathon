@@ -38,6 +38,7 @@ export async function handlePhoto(ctx) {
       attendee_id: attendee.id,
       cloudinary_url: result.secure_url,
       cloudinary_public_id: result.public_id,
+      user_caption: ctx.message.caption ?? null,
     });
 
     await supabase

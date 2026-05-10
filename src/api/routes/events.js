@@ -32,7 +32,7 @@ router.get('/user/:userId', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabase
     .from('events')
-    .select('*, attendees(*), photos(*)')
+    .select('*, attendees(*), photos(*, attendees(name))')
     .eq('id', req.params.id)
     .single();
 

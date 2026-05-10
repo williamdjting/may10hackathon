@@ -39,7 +39,9 @@ export type Attendee = {
 export type Photo = {
   id: string;
   cloudinary_url: string;
+  user_caption: string | null;
   created_at: string;
+  attendees?: { name: string };
 };
 
 export type Storybook = {
@@ -70,8 +72,11 @@ const realApi = {
   },
   storybooks: {
     get: (eventId: string) => request<Storybook>(`/api/storybooks/event/${eventId}`),
-    generate: (eventId: string) =>
-      request<{ message: string }>(`/api/storybooks/generate/${eventId}`, { method: 'POST' }),
+    generate: (eventId: string, prompt = '') =>
+      request<{ message: string }>(`/api/storybooks/generate/${eventId}`, {
+        method: 'POST',
+        body: JSON.stringify({ prompt }),
+      }),
   },
 };
 
