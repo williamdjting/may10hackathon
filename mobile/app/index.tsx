@@ -9,10 +9,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { api, Event } from '../services/api';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,7 +72,7 @@ export default function HomeScreen() {
         data={events}
         keyExtractor={(e) => e.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No events yet</Text>
@@ -101,7 +103,10 @@ export default function HomeScreen() {
           </View>
         )}
       />
-      <Pressable style={styles.fab} onPress={() => router.push('/create')}>
+      <Pressable
+        style={[styles.fab, { bottom: insets.bottom + 20 }]}
+        onPress={() => router.push('/create')}
+      >
         <Text style={styles.fabText}>+ New Event</Text>
       </Pressable>
     </View>
@@ -111,7 +116,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { padding: 20, paddingBottom: 100 },
+  list: { padding: 20 },
   heading: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', marginBottom: 20 },
   card: {
     flex: 1,
@@ -148,7 +153,6 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 15, color: '#888' },
   fab: {
     position: 'absolute',
-    bottom: 36,
     alignSelf: 'center',
     backgroundColor: '#C96A2C',
     paddingHorizontal: 32,

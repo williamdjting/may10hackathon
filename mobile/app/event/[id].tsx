@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   Pressable,
   RefreshControl,
@@ -11,19 +10,23 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { api, Event, Storybook } from '../../services/api';
 
 declare const process: { env: Record<string, string | undefined> };
 const BOT_USERNAME = process.env.EXPO_PUBLIC_BOT_USERNAME ?? 'CandidMomentsBot';
-const { width } = Dimensions.get('window');
-const PHOTO_SIZE = (width - 48 - 8) / 3;
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const PHOTO_SIZE = (width - 48 - 8) / 3;
+
   const [event, setEvent] = useState<Event | null>(null);
   const [storybook, setStorybook] = useState<Storybook | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +60,6 @@ export default function EventDetailScreen() {
     try {
       await Share.share({ message });
     } catch {
-      // Web fallback: copy to clipboard
       await navigator.clipboard.writeText(message);
       Alert.alert('Copied!', 'Invite link copied to clipboard.');
     }
@@ -89,6 +91,7 @@ export default function EventDetailScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
     >
       {/* Stats row */}
@@ -118,7 +121,7 @@ export default function EventDetailScreen() {
               <Image
                 key={photo.id}
                 source={{ uri: photo.cloudinary_url }}
-                style={styles.photoThumb}
+                style={{ width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 8, backgroundColor: '#EEE' }}
               />
             ))}
           </View>
@@ -220,7 +223,6 @@ const styles = StyleSheet.create({
   },
   outlineButtonText: { color: '#C96A2C', fontWeight: '600', fontSize: 15 },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  photoThumb: { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 8, backgroundColor: '#EEE' },
   primaryButton: {
     backgroundColor: '#C96A2C',
     borderRadius: 14,
@@ -244,14 +246,13 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   storybookButtons: { gap: 10 },
-  regenerateButton: { backgroundColor: '#888' },
+  regenerateButton: { backgroundColor: '#C96A2C' },
   homeButton: {
     borderWidth: 1.5,
     borderColor: '#CCC',
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
-    marginBottom: 40,
   },
   homeButtonText: { color: '#888', fontWeight: '600', fontSize: 15 },
 });
