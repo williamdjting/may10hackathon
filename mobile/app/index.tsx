@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -30,6 +31,31 @@ export default function HomeScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  function handleDelete(item: Event) {
+    const confirm = typeof window !== 'undefined'
+      ? window.confirm(`Delete "${item.name}"? This cannot be undone.`)
+      : false;
+
+    if (typeof window !== 'undefined') {
+      if (!confirm) return;
+      api.events.delete(item.id)
+        .then(() => setEvents(prev => prev.filter(e => e.id !== item.id)))
+        .catch(e => alert(e.message));
+    } else {
+      Alert.alert('Delete Event', `Delete "${item.name}"? This cannot be undone.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            api.events.delete(item.id)
+              .then(() => setEvents(prev => prev.filter(e => e.id !== item.id)))
+              .catch(e => Alert.alert('Error', e.message)),
+        },
+      ]);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -53,18 +79,26 @@ export default function HomeScreen() {
         }
         ListHeaderComponent={<Text style={styles.heading}>Your Gatherings</Text>}
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => router.push(`/event/${item.id}`)}>
-            <View style={styles.cardTop}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <View style={[styles.badge, item.status === 'active' ? styles.badgeActive : styles.badgeDone]}>
-                <Text style={styles.badgeText}>{item.status}</Text>
+          <View style={styles.cardRow}>
+            <Pressable
+              style={styles.card}
+              onPress={() => router.push(`/event/${item.id}`)}
+            >
+              <View style={styles.cardTop}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <View style={[styles.badge, item.status === 'active' ? styles.badgeActive : styles.badgeDone]}>
+                  <Text style={styles.badgeText}>{item.status}</Text>
+                </View>
               </View>
-            </View>
-            {item.event_date && (
-              <Text style={styles.cardDate}>{new Date(item.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
-            )}
-            <Text style={styles.cardCode}>Code: {item.code}</Text>
-          </Pressable>
+              {item.event_date && (
+                <Text style={styles.cardDate}>{new Date(item.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+              )}
+              <Text style={styles.cardCode}>Code: {item.code}</Text>
+            </Pressable>
+            <Pressable style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+              <Text style={styles.deleteBtnText}>✕</Text>
+            </Pressable>
+          </View>
         )}
       />
       <Pressable style={styles.fab} onPress={() => router.push('/create')}>
@@ -80,10 +114,10 @@ const styles = StyleSheet.create({
   list: { padding: 20, paddingBottom: 100 },
   heading: { fontSize: 28, fontWeight: '800', color: '#1A1A1A', marginBottom: 20 },
   card: {
+    flex: 1,
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 18,
-    marginBottom: 14,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -94,6 +128,17 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 17, fontWeight: '700', color: '#1A1A1A', flex: 1, marginRight: 8 },
   cardDate: { fontSize: 14, color: '#888', marginBottom: 4 },
   cardCode: { fontSize: 13, color: '#C96A2C', fontWeight: '600', marginTop: 4 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  deleteBtn: {
+    marginLeft: 10,
+    backgroundColor: '#FFE5E5',
+    borderRadius: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: { color: '#E53935', fontSize: 16, fontWeight: '700' },
   badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   badgeActive: { backgroundColor: '#E8F5E9' },
   badgeDone: { backgroundColor: '#FFF3E0' },

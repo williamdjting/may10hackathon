@@ -53,7 +53,7 @@ export default function EventDetailScreen() {
   async function handleShare() {
     if (!event) return;
     const link = `https://t.me/${BOT_USERNAME}?start=${event.code}`;
-    const message = `Join ${event.name} on CandidMoments!\nTap to contribute your photo: ${link}`;
+    const message = `You're invited to ${event.name} on CandidMoments!\n\nHow to contribute your photo:\n1. Open the bot: ${link}\n2. Type the event code: ${event.code}\n3. Send your photo with a caption describing the moment`;
     try {
       await Share.share({ message });
     } catch {
@@ -161,6 +161,13 @@ export default function EventDetailScreen() {
           </View>
         )}
       </View>
+
+      {/* Home button */}
+      <View style={styles.section}>
+        <Pressable style={styles.homeButton} onPress={() => router.replace('/')}>
+          <Text style={styles.homeButtonText}>← Back to Home</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -238,4 +245,13 @@ const styles = StyleSheet.create({
   },
   storybookButtons: { gap: 10 },
   regenerateButton: { backgroundColor: '#888' },
+  homeButton: {
+    borderWidth: 1.5,
+    borderColor: '#CCC',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  homeButtonText: { color: '#888', fontWeight: '600', fontSize: 15 },
 });
