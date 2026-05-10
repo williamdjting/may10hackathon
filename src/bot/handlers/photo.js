@@ -1,23 +1,30 @@
 import axios from 'axios';
 import { supabase } from '../../services/supabase.js';
 import { uploadToCloudinary } from '../../services/cloudinary.js';
+import { getSession } from '../sessions.js';
 
 export async function handlePhoto(ctx) {
   const telegramId = String(ctx.from.id);
+  const sessionAttendeeId = getSession(telegramId);
 
-  const { data: attendees } = await supabase
-    .from('attendees')
-    .select('*, events(*)')
-    .eq('telegram_chat_id', telegramId)
-    .in('status', ['joined', 'submitted'])
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (!attendees?.length) {
-    return ctx.reply("You're not registered for an event yet. Use the invitation link to join one!");
+  if (!sessionAttendeeId) {
+    return ctx.reply(
+      "Please type your event code first (e.g. *ABC123*), then send your photo.\n\n" +
+      "_You can find the code in your invitation._",
+      { parse_mode: 'Markdown' }
+    );
   }
 
-  const attendee = attendees[0];
+  const { data: attendee } = await supabase
+    .from('attendees')
+    .select('*, events(*)')
+    .eq('id', sessionAttendeeId)
+    .single();
+
+  if (!attendee) {
+    return ctx.reply("Couldn't find your event registration. Please type your event code again.");
+  }
+
   await ctx.reply('Uploading your photo...');
 
   try {
@@ -38,6 +45,7 @@ export async function handlePhoto(ctx) {
       attendee_id: attendee.id,
       cloudinary_url: result.secure_url,
       cloudinary_public_id: result.public_id,
+      user_caption: ctx.message.caption ?? null,
     });
 
     await supabase

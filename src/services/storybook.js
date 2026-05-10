@@ -14,27 +14,37 @@ export async function generateStorybook(eventId, customPrompt = '') {
       return;
     }
 
-    const photoList = event.photos
-      .map((p, i) => `Photo ${i + 1} by ${p.attendees?.name ?? 'a guest'}: ${p.cloudinary_url}`)
-      .join('\n');
-
     const toneInstruction = customPrompt
       ? `The organizer has provided this guidance for the story: "${customPrompt}"\n\n`
       : '';
 
+    const photoList = event.photos
+      .map((p, i) => {
+        const name = p.attendees?.name ?? 'a guest';
+        const caption = p.user_caption
+          ? `  Their caption: "${p.user_caption}"`
+          : `  (no caption provided)`;
+        return `Photo ${i + 1} by ${name}\n${caption}`;
+      })
+      .join('\n\n');
+
     const prompt =
-      `You are a warm, creative storyteller creating a digital storybook for a gathering called "${event.name}".\n` +
+      `You are writing a digital storybook for a gathering called "${event.name}".\n` +
       `Event description: ${event.description ?? 'A special gathering'}\n` +
       `Event date: ${event.event_date ?? 'Recently'}\n\n` +
       toneInstruction +
-      `Here are photos contributed by attendees:\n${photoList}\n\n` +
-      `For each photo write a short, heartfelt caption (2–3 sentences) as if narrating a family keepsake.\n` +
-      `Then write a closing paragraph that weaves all the moments into one story.\n\n` +
-      `Respond with ONLY valid JSON in this exact shape:\n` +
+      `Each attendee contributed a photo and wrote a caption describing their moment. ` +
+      `Your job is to expand each caption into 2–3 warm, narrative sentences suitable for a family keepsake. ` +
+      `When a caption is provided, it is the photographer's own words — stay true to the feeling and details they described, ` +
+      `and build on them rather than replacing them. ` +
+      `When no caption is provided, write something warm and brief based on the contributor and the event.\n\n` +
+      `Here are the photos:\n\n${photoList}\n\n` +
+      `Then write a closing paragraph weaving all moments into one story.\n\n` +
+      `Respond with ONLY valid JSON:\n` +
       `{\n` +
       `  "title": "storybook title",\n` +
       `  "pages": [\n` +
-      `    { "photo_url": "...", "contributor": "...", "caption": "..." }\n` +
+      event.photos.map(p => `    { "photo_url": "${p.cloudinary_url}", "contributor": "${p.attendees?.name ?? 'a guest'}", "caption": "..." }`).join(',\n') + '\n' +
       `  ],\n` +
       `  "closing": "closing narrative"\n` +
       `}`;

@@ -67,6 +67,8 @@ const realApi = {
         method: 'POST',
         body: JSON.stringify({ ...body, creator_id: DEMO_USER_ID }),
       }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/events/${id}`, { method: 'DELETE' }),
   },
   storybooks: {
     get: (eventId: string) => request<Storybook>(`/api/storybooks/event/${eventId}`),

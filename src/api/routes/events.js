@@ -40,4 +40,14 @@ router.get('/:id', async (req, res) => {
   res.json(data);
 });
 
+router.delete('/:id', async (req, res) => {
+  const { error } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', req.params.id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
 export default router;
