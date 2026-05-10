@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../../services/supabase.js';
-import { generateStorybook } from '../../services/storybook.js';
+import { generateStorybook, generateMegaStorybook } from '../../services/storybook.js';
 
 const router = Router();
 
@@ -28,6 +28,18 @@ router.post('/generate/:eventId', async (req, res) => {
   generateStorybook(eventId, prompt).catch(console.error);
 
   res.json({ message: 'Storybook generation started', event_id: eventId });
+});
+
+router.post('/mega', async (req, res) => {
+  const { eventIds, prompt = '' } = req.body;
+  if (!eventIds?.length) return res.status(400).json({ error: 'No events selected' });
+
+  try {
+    const result = await generateMegaStorybook(eventIds, prompt);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

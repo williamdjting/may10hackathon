@@ -69,6 +69,65 @@ export async function generateStorybook(eventId, customPrompt = '') {
   }
 }
 
+export async function generateMegaStorybook(eventIds, customPrompt = '') {
+  const { data: events } = await supabase
+    .from('events')
+    .select('*, photos(*, attendees(name))')
+    .in('id', eventIds);
+
+  if (!events?.length) throw new Error('No events found');
+
+  const eventSections = events
+    .filter(e => e.photos?.length)
+    .map(e => {
+      const photos = e.photos
+        .map((p, i) => {
+          const name = p.attendees?.name ?? 'a guest';
+          const caption = p.user_caption ? `  Their caption: "${p.user_caption}"` : '  (no caption provided)';
+          return `Photo ${i + 1} by ${name}\n${caption}`;
+        })
+        .join('\n\n');
+      return `=== Event: ${e.name} (${e.event_date ?? 'recent'}) ===\n${photos}`;
+    })
+    .join('\n\n');
+
+  const toneInstruction = customPrompt ? `Tone guidance from the contributor: "${customPrompt}"\n\n` : '';
+
+  const prompt =
+    `You are writing a mega storybook that spans multiple gatherings for the same person or family.\n` +
+    toneInstruction +
+    `Each event section below contains photos and captions contributed by attendees. ` +
+    `For each photo, expand the caption into 2–3 warm narrative sentences. ` +
+    `Stay true to the photographer's own words when a caption is provided.\n\n` +
+    `${eventSections}\n\n` +
+    `Write a closing paragraph that weaves all the events into one continuous story of connection.\n\n` +
+    `Respond with ONLY valid JSON:\n` +
+    `{\n` +
+    `  "title": "mega storybook title",\n` +
+    `  "sections": [\n` +
+    events.filter(e => e.photos?.length).map(e =>
+      `    { "event_name": "${e.name}", "event_date": "${e.event_date ?? ''}", "pages": [\n` +
+      e.photos.map(p => `      { "photo_url": "${p.cloudinary_url}", "contributor": "${p.attendees?.name ?? 'a guest'}", "caption": "..." }`).join(',\n') +
+      `\n    ] }`
+    ).join(',\n') + '\n' +
+    `  ],\n` +
+    `  "closing": "closing narrative"\n` +
+    `}`;
+
+  const first = await sendMessage({ content: prompt, memory: 'Auto' });
+  const parsed = extractJSON(first.content);
+  if (!parsed) {
+    const retry = await sendMessage({
+      content: 'Please respond with only the JSON object, no surrounding text.',
+      threadId: first.threadId,
+    });
+    const retryParsed = extractJSON(retry.content);
+    if (!retryParsed) throw new Error('Could not parse mega storybook JSON after retry');
+    return retryParsed;
+  }
+  return parsed;
+}
+
 function extractJSON(text) {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) return null;

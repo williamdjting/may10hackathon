@@ -1,4 +1,4 @@
-import { Event, Storybook } from './api';
+import { Event, MegaStorybook, Storybook } from './api';
 
 const MOCK_EVENTS: Event[] = [
   {
@@ -77,6 +77,29 @@ const MOCK_STORYBOOK: Storybook = {
 
 let nextId = 3;
 
+const MOCK_MEGA: MegaStorybook = {
+  title: "A Year of Gatherings",
+  sections: [
+    {
+      event_name: "Mom's Birthday Brunch",
+      event_date: '2026-05-10',
+      pages: [
+        { photo_url: 'https://picsum.photos/seed/brunch1/800/600', contributor: 'Sarah', caption: "The table was set before anyone arrived — flowers from the garden, her favourite china. Sarah slipped in early to make sure everything was exactly right." },
+        { photo_url: 'https://picsum.photos/seed/brunch2/800/600', contributor: 'Jake', caption: "Jake caught the moment she walked in. Sixty years old and she still looked genuinely surprised — hands to her mouth, eyes bright." },
+      ],
+    },
+    {
+      event_name: "Grandpa's 85th",
+      event_date: '2026-04-20',
+      pages: [
+        { photo_url: 'https://picsum.photos/seed/lake1/800/600', contributor: 'Tom', caption: "The lake was calm that morning, and so was he. Eighty-five years of life reflected in quiet eyes watching the water." },
+        { photo_url: 'https://picsum.photos/seed/lake2/800/600', contributor: 'Diana', caption: "Laughter erupted when someone finally got the fishing rod untangled. These are the moments that become family legend." },
+      ],
+    },
+  ],
+  closing: "From birthday brunches to lakeside reunions, these moments are the threads that weave a family together. What a year of love it has been.",
+};
+
 export const api = {
   events: {
     list: async (): Promise<Event[]> => {
@@ -105,6 +128,12 @@ export const api = {
       MOCK_EVENTS.unshift(newEvent);
       return newEvent;
     },
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      await delay(300);
+      const i = MOCK_EVENTS.findIndex(e => e.id === id);
+      if (i !== -1) MOCK_EVENTS.splice(i, 1);
+      return { success: true };
+    },
   },
   storybooks: {
     get: async (eventId: string): Promise<Storybook> => {
@@ -115,6 +144,16 @@ export const api = {
     generate: async (eventId: string): Promise<{ message: string }> => {
       await delay(500);
       return { message: 'Storybook generation started', event_id: eventId } as any;
+    },
+    mega: async (_eventIds: string[]): Promise<MegaStorybook> => {
+      await delay(1500);
+      return MOCK_MEGA;
+    },
+  },
+  contributor: {
+    events: async (_telegramId: string): Promise<Event[]> => {
+      await delay(400);
+      return MOCK_EVENTS;
     },
   },
 };

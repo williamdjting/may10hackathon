@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { api, Storybook } from '../../services/api';
+import SignOutButton from '../../components/SignOutButton';
 
 export default function StorybookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -100,6 +101,8 @@ export default function StorybookScreen() {
       <Pressable style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.backButtonText}>← Back to Event</Text>
       </Pressable>
+
+      <SignOutButton />
     </ScrollView>
   );
 }

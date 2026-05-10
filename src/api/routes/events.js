@@ -18,6 +18,40 @@ router.post('/', async (req, res) => {
   res.json(data);
 });
 
+router.get('/all', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*, photos(*), attendees(count)')
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(400).json({ error: error.message });
+  const withPhotos = data.filter(e => e.photos?.length > 0);
+  res.json(withPhotos);
+});
+
+// Events where a specific Telegram user contributed a photo
+router.get('/contributed/:telegramId', async (req, res) => {
+  const { data: attendees, error } = await supabase
+    .from('attendees')
+    .select('event_id')
+    .eq('telegram_chat_id', req.params.telegramId)
+    .eq('status', 'submitted');
+
+  if (error) return res.status(400).json({ error: error.message });
+  if (!attendees?.length) return res.json([]);
+
+  const eventIds = attendees.map(a => a.event_id);
+
+  const { data: events, error: evErr } = await supabase
+    .from('events')
+    .select('*, photos(*), attendees(count)')
+    .in('id', eventIds)
+    .order('created_at', { ascending: false });
+
+  if (evErr) return res.status(400).json({ error: evErr.message });
+  res.json(events ?? []);
+});
+
 router.get('/user/:userId', async (req, res) => {
   const { data, error } = await supabase
     .from('events')
