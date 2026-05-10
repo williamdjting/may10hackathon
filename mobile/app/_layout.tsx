@@ -1,17 +1,39 @@
 import { useState } from 'react';
+import { Pressable, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import LoginView from '../components/LoginView';
+import LoginView, { Role } from '../components/LoginView';
+import UserApp from '../components/UserApp';
 
 export default function RootLayout() {
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState<Role | null>(null);
+  const [telegramId, setTelegramId] = useState<string | undefined>();
 
-  if (!loggedIn) {
+  function handleLogin(r: Role, tid?: string) {
+    setTelegramId(tid);
+    setRole(r);
+  }
+
+  function handleLogout() {
+    setRole(null);
+    setTelegramId(undefined);
+  }
+
+  if (!role) {
     return (
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <LoginView onLogin={() => setLoggedIn(true)} />
+        <LoginView onLogin={handleLogin} />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (role === 'user') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <UserApp telegramId={telegramId!} onLogout={handleLogout} />
       </SafeAreaProvider>
     );
   }
@@ -26,6 +48,11 @@ export default function RootLayout() {
           headerTitleAlign: 'center',
           headerShadowVisible: false,
           contentStyle: { backgroundColor: '#FAFAF8' },
+          headerRight: () => (
+            <Pressable onPress={handleLogout} style={{ marginRight: 4 }}>
+              <Text style={{ color: '#888', fontSize: 14, fontWeight: '600' }}>Sign out</Text>
+            </Pressable>
+          ),
         }}
       >
         <Stack.Screen

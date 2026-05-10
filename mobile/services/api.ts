@@ -56,6 +56,24 @@ export type Storybook = {
   };
 };
 
+export type MegaStorybookPage = {
+  photo_url: string;
+  contributor: string;
+  caption: string;
+};
+
+export type MegaStorybookSection = {
+  event_name: string;
+  event_date: string;
+  pages: MegaStorybookPage[];
+};
+
+export type MegaStorybook = {
+  title: string;
+  sections: MegaStorybookSection[];
+  closing: string;
+};
+
 export const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 const realApi = {
@@ -77,6 +95,14 @@ const realApi = {
         method: 'POST',
         body: JSON.stringify({ prompt }),
       }),
+    mega: (eventIds: string[], prompt = '') =>
+      request<MegaStorybook>('/api/storybooks/mega', {
+        method: 'POST',
+        body: JSON.stringify({ eventIds, prompt }),
+      }),
+  },
+  contributor: {
+    events: (telegramId: string) => request<Event[]>(`/api/events/contributed/${telegramId}`),
   },
 };
 

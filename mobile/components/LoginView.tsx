@@ -10,23 +10,39 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+export type Role = 'admin' | 'user';
+
 interface Props {
-  onLogin: () => void;
+  onLogin: (role: Role, telegramId?: string) => void;
 }
+
+const CREDENTIALS: Record<string, Role> = {
+  'admin:admin': 'admin',
+  'user:user': 'user',
+};
 
 export default function LoginView({ onLogin }: Props) {
   const insets = useSafeAreaInsets();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [telegramId, setTelegramId] = useState('');
   const [error, setError] = useState('');
 
+  const isUserRole = username.trim().toLowerCase() === 'user';
+
   function handleLogin() {
-    if (username.trim() === 'admin' && password === 'admin') {
-      setError('');
-      onLogin();
-    } else {
+    const key = `${username.trim().toLowerCase()}:${password}`;
+    const role = CREDENTIALS[key];
+    if (!role) {
       setError('Incorrect username or password.');
+      return;
     }
+    if (role === 'user' && !telegramId.trim()) {
+      setError('Please enter your Telegram ID to continue.');
+      return;
+    }
+    setError('');
+    onLogin(role, role === 'user' ? telegramId.trim() : undefined);
   }
 
   return (
@@ -70,6 +86,24 @@ export default function LoginView({ onLogin }: Props) {
             secureTextEntry
           />
 
+          {/* Telegram ID — shown only for the user/contributor role */}
+          {isUserRole && (
+            <View>
+              <TextInput
+                style={styles.input}
+                value={telegramId}
+                onChangeText={t => { setTelegramId(t); setError(''); }}
+                placeholder="Your Telegram user ID (e.g. 123456789)"
+                placeholderTextColor="#BBB"
+                keyboardType="numeric"
+                autoCorrect={false}
+              />
+              <Text style={styles.hint}>
+                Find your ID by messaging @userinfobot on Telegram.
+              </Text>
+            </View>
+          )}
+
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable style={styles.button} onPress={handleLogin}>
@@ -88,8 +122,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-
-  // Logo — camera shape built from Views
   logoWrap: { marginBottom: 28 },
   logoCircle: {
     width: 100,
@@ -125,8 +157,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#FAFAF8',
   },
-
-  // Brand
   brand: {
     fontSize: 32,
     fontWeight: '800',
@@ -140,8 +170,6 @@ const styles = StyleSheet.create({
     marginBottom: 48,
     textAlign: 'center',
   },
-
-  // Form
   form: { width: '100%', gap: 14 },
   input: {
     backgroundColor: '#FFF',
@@ -157,6 +185,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
+  hint: { fontSize: 12, color: '#AAA', marginTop: 6, marginLeft: 4 },
   error: {
     color: '#E53935',
     fontSize: 14,
